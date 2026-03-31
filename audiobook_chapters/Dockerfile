@@ -22,7 +22,9 @@ WORKDIR /src/jellyfin
 RUN git clone --depth 1 --branch feat/audiobook_chapters https://github.com/sevenrats/jellyfin.git .
 RUN dotnet publish Jellyfin.Server/Jellyfin.Server.csproj \
     --configuration Release \
-    --output /build/server
+    --output /build/server \
+    --self-contained \
+    -p:DebugSymbols=false -p:DebugType=none
 
 # ============================================================
 # Stage 3: Use official Jellyfin runtime, swap in our builds
