@@ -1,0 +1,43 @@
+name: Build audiobook_chapters image
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'audiobook_chapters/**'
+      - '.github/workflows/build-audiobook-chapters.yml'
+  workflow_dispatch:
+
+env:
+  IMAGE: ghcr.io/sevenrats/jellylab
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: audiobook_chapters
+          file: audiobook_chapters/Dockerfile
+          push: true
+          tags: ${{ env.IMAGE }}:audiobook_chapters
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
