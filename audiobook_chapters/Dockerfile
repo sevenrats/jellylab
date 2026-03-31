@@ -1,5 +1,5 @@
 # Multi-stage Dockerfile for building Jellyfin server + web into a test image
-# Pulls source from GitHub forks
+# Extends the official jellyfin/jellyfin image with our built code
 
 # ============================================================
 # Stage 1: Build the web client
@@ -25,32 +25,12 @@ RUN dotnet publish Jellyfin.Server/Jellyfin.Server.csproj \
     --output /build/server
 
 # ============================================================
-# Stage 3: Runtime image
+# Stage 3: Use official Jellyfin runtime, swap in our builds
 # ============================================================
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+FROM jellyfin/jellyfin:unstable AS runtime
 
-# Install ffmpeg (required for media probing/transcoding)
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends ffmpeg \
-    && rm -rf /var/lib/apt/lists/*
+# Replace server binaries with our build
+COPY --from=server-build /build/server /jellyfin
 
-# Create jellyfin user
-RUN groupadd -r jellyfin && useradd -r -g jellyfin -m jellyfin
-
-# Copy server build
-COPY --from=server-build /build/server /jellyfin/server
-
-# Copy web client build
-COPY --from=web-build /src/jellyfin-web/dist /jellyfin/web
-
-# Create data directories
-RUN mkdir -p /config /cache /media && chown -R jellyfin:jellyfin /config /cache /media /jellyfin
-
-USER jellyfin
-
-EXPOSE 8096
-
-ENTRYPOINT ["dotnet", "/jellyfin/server/jellyfin.dll", \
-    "--datadir", "/config", \
-    "--cachedir", "/cache", \
-    "--webdir", "/jellyfin/web"]
+# Replace web client with our build
+COPY --from=web-build /src/jellyfin-web/dist /jellyfin/jellyfin-web
